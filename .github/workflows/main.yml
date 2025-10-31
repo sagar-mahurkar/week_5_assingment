@@ -30,8 +30,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install scikit-learn pandas numpy pytest joblib matplotlib dvc dvc-gs mlfow tabulate
-          pip install dvc[gcs]
+          pip install scikit-learn pandas numpy pytest joblib matplotlib dvc dvc-gs mlflow
         
       - name: Google Cloud Authentication
         id: 'auth'
