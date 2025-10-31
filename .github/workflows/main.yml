@@ -1,0 +1,79 @@
+name: MLOps Model CI + MLflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+permissions:
+    contents: write
+    pull-requests: write
+
+jobs:
+  test-and-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+    
+      - name: Setup CML (Continuous Machine Learning)
+        uses: iterative/setup-cml@v2.0.1
+        
+
+      - name: Install dependencies
+        run: |
+          pip install scikit-learn pandas numpy pytest joblib matplotlib dvc dvc-gs mlfow tabulate
+          pip install dvc[gcs]
+        
+      - name: Google Cloud Authentication
+        id: 'auth'
+        uses: 'google-github-actions/auth@v3'
+        with:
+          credentials_json: '${{ secrets.GCP_SA }}'
+    
+      - name: Pulling Data using DVC
+        run: |
+          dvc pull
+      
+      - name: Training Model
+        run: |
+          python3 train.py
+
+      - name: Load Model from mlflow
+        run: |
+          python3 fetch_from_mlflow.py
+
+      - name: Run Tests
+        run: |
+          pytest -v &> output.txt 
+
+      
+      - name: Create cml report
+        run: |
+            # Initialize the primary report document
+            echo "# CML Test & Evaluation Summary" > report.md
+
+            # Document the test run output section
+            echo "## Automated Test Suite Results" >> report.md
+            # Check for the presence of the testing log file
+            if [ -f test_run_log.txt ]; then
+              echo "\`\`\`" >> report.md
+              # Append contents of the available log file to the report
+              cat test_run_log.txt >> report.md
+              echo "\`\`\`" >> report.md
+            else
+              echo "Test execution log (test_run_log.txt) could not be located." >> report.md
+            fi
+          
+        
+        
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
